@@ -53,19 +53,58 @@ const socket = io();
 
 const welcom = document.getElementById("welcome");
 const form = welcom.querySelector("form");
+const room = document.getElementById("room");
 
-function backendDone(msg){
-    console.log(`The backend says: `, msg);
+room.hidden = true;
+
+let roomName;
+
+function addMessage(message){
+    const ul = room.querySelector("ul");
+    const li = document.createElement("li");
+    li.innerText = message;
+    ul.appendChild(li);
+}
+
+function handleMessageSubmit(event){
+    event.preventDefault();
+    const input = room.querySelector("input");
+    const value = input.value;
+    socket.emit("new_message", input.value, roomName, () => {
+        addMessage(`You: ${value}`);
+    });
+    input.value = "";
+} 
+
+function showRoom(){
+    welcom.hidden = true;
+    room.hidden = false;
+    const h3 = room.querySelector("h3");
+    h3.innerText = `Room ${roomName}`;
+    const form = room.querySelector("form");
+    form.addEventListener("submit", handleMessageSubmit);
 }
 
 function handleRoomSubmit(event){
     event.preventDefault();
-    const input = form.querySelector("input");
+    const input = welcom.querySelector("input");    
     //1. 어떤 event든지 전송이 가능하다.
     //2. Javascript object를 전송할 수 있다.
     //ws 는 object를 string 형태로 바꿔주어야 했었다.
     //front-end 에서 실행할 function 같은경우는 항상 맨 마지막에 넣어준다.
-    socket.emit("enter_room", input.value, backendDone);
+    socket.emit("enter_room", input.value, showRoom);
+    
+    roomName = input.value;
     input.value="";
 }
 form.addEventListener("submit", handleRoomSubmit);
+
+socket.on("welcome", () => {
+  addMessage("someone joined!");
+});
+
+socket.on("bye", () => {
+    addMessage("someone left UU");
+});
+
+socket.on("new_message", addMessage);

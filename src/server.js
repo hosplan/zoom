@@ -21,16 +21,23 @@ const httpServer = http.createServer(app);
 const wsServer = SocketIO(httpServer);
 
 wsServer.on("connection", socket => {
+    socket.onAny((event)=>{
+        console.log(`Socket Event:${event}`);
+    });
     //enter_room이라는 이벤트.
     socket.on("enter_room", (roomName, done) => {
-        console.log(roomName);
-        setTimeout(() =>{
-            //done() function을 실행할때에
-            //이 코드를 backend에서 실행하는것이 아니다.
-            //frontend에서 실행한다.
-            //즉 back-end 에서 front-end 코드를 실행시킨다.
-            done("hello from back-end");
-        }, 15000);
+        socket.join(roomName);
+        //done()은 app.js 의 showRoom()을 실행시킨다.
+        done();
+        socket.to(roomName).emit("welcome");
+    });
+    socket.on("disconnecting", () => {
+        socket.rooms.forEach((room) => socket.to(room).emit("bye"));
+    });
+    socket.on("new_message", (msg, room, done) => {
+        //app.js 의 socket.on("new_message")로 간다.
+        socket.to(room).emit("new_message", msg);
+        done();
     });
 });
 
