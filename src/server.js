@@ -20,25 +20,45 @@ app.get("/*", (req,res) => res.redirect("/"));
 const httpServer = http.createServer(app);
 const wsServer = SocketIO(httpServer);
 
+function publicRooms(){
+    const {
+        sockets: {
+            adapter:{sids, rooms},
+        },
+    } = wsServer;
+    // const sids = wsServer.sockets.adapter.sids;
+    // const rooms = wsServer.sockets.adapter.rooms;
+    const publicRooms = [];
+    rooms.forEach((_,key) => {
+        if(sids.get(key) === undefined){
+            publicRooms.push(key)
+        } 
+    });
+    return publicRooms;
+}
+
 wsServer.on("connection", socket => {
+    socket["nickname"] = "Anon";
     socket.onAny((event)=>{
-        console.log(`Socket Event:${event}`);
+        console.log(wsServer.sockets.adapter);
+        console.log(`Socket Event:${event}`);        
     });
     //enter_room이라는 이벤트.
     socket.on("enter_room", (roomName, done) => {
         socket.join(roomName);
         //done()은 app.js 의 showRoom()을 실행시킨다.
         done();
-        socket.to(roomName).emit("welcome");
+        socket.to(roomName).emit("welcome", socket.nickname);
     });
     socket.on("disconnecting", () => {
-        socket.rooms.forEach((room) => socket.to(room).emit("bye"));
+        socket.rooms.forEach((room) => socket.to(room).emit("bye", socket.nickname));
     });
     socket.on("new_message", (msg, room, done) => {
         //app.js 의 socket.on("new_message")로 간다.
-        socket.to(room).emit("new_message", msg);
+        socket.to(room).emit("new_message", `${socket.nickname}: ${msg}`);
         done();
     });
+    socket.on("nickname", (nickname) => (socket["nickname"] = nickname))
 });
 
 //const wss = new WebSocket.Server({server});
