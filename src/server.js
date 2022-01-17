@@ -37,6 +37,12 @@ function publicRooms(){
     return publicRooms;
 }
 
+//방이 얼마나 큰지 계산
+function countRoom(roomName){
+    //? Optional chaining    
+    return wsServer.sockets.adapter.rooms.get(roomName)?.size
+}
+
 wsServer.on("connection", socket => {
     socket["nickname"] = "Anon";
     socket.onAny((event)=>{
@@ -48,10 +54,15 @@ wsServer.on("connection", socket => {
         socket.join(roomName);
         //done()은 app.js 의 showRoom()을 실행시킨다.
         done();
-        socket.to(roomName).emit("welcome", socket.nickname);
+        socket.to(roomName).emit("welcome", socket.nickname, countRoom(roomName));
+        wsServer.sockets.emit("room_change", publicRooms());
     });
+    //disconnecting은 퇴장하기 직전이다. 아직 왅던히 방을 떠나지 않은 상태
     socket.on("disconnecting", () => {
-        socket.rooms.forEach((room) => socket.to(room).emit("bye", socket.nickname));
+        socket.rooms.forEach((room) => socket.to(room).emit("bye", socket.nickname, countRoom(room)-1));    
+    });
+    socket.on("disconnect", () => {
+        wsServer.sockets.emit("room_change", publicRooms());
     });
     socket.on("new_message", (msg, room, done) => {
         //app.js 의 socket.on("new_message")로 간다.

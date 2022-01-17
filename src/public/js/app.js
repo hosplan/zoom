@@ -107,12 +107,30 @@ function handleRoomSubmit(event){
 }
 form.addEventListener("submit", handleRoomSubmit);
 
-socket.on("welcome", (user) => {
-  addMessage(`${user} 가 방에 입장 했습니다.`);
+socket.on("welcome", (user, newCount) => {
+    const h3 = room.querySelector("h3");
+    h3.innerText = `Room ${roomName} (${newCount})`; 
+    addMessage(`${user} 가 방에 입장 했습니다.`);
 });
 
-socket.on("bye", (left) => {
+socket.on("bye", (left, newCount) => {
+    const h3 = room.querySelector("h3");
+    h3.innerText = `Room ${roomName} (${newCount})`; 
     addMessage(`${left} 가 방을 떠났습니다.`);
 });
 
 socket.on("new_message", addMessage);
+
+socket.on("room_change", (rooms) => {
+    const roomList = welcome.querySelector("ul");
+    if(rooms.length === 0){
+        roomList.innerHTML = "";
+        return;
+    }
+    
+    rooms.forEach(room => {
+        const li = document.createElement("li");
+        li.innerText = room;
+        roomList.append(li);
+    })
+});
